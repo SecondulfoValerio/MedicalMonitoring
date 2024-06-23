@@ -73,10 +73,6 @@ AUTOSTART_PROCESSES(&mqtt_client_process);
 
 //global variables to store body values
 
-static int trestbps =0;
-static int fbs =0;
-static int restecg =0;
-static int thalac =0;
 // Global variables to store sensor values
 static int xla = 0;
 static int yla = 0;
@@ -90,9 +86,9 @@ static int zaa = 0;
 //static int heart=0; //Initially set to 0 to generate movements values
 
 static char pub_mov_topic[BUFFER_SIZE]; //topic movement
-static char pub_bod_topic[BUFFER_SIZE]; //topic values
+
 static char sub_mov_topic[BUFFER_SIZE];
-static char sub_bod_topic[BUFFER_SIZE];
+
 //
 static char client_id[BUFFER_SIZE];
 static int modality=0; //0= patient standing - heart good 1= patient standing - heart problem - 2 patient fallen - heart good - 3 patient fallen - heart problem
@@ -109,7 +105,7 @@ static struct etimer periodic_timer;
 #define APP_BUFFER_SIZE 512
 
 static char app_buffer_mov[APP_BUFFER_SIZE];
-static char app_buffer_bod[APP_BUFFER_SIZE];
+//static char app_buffer_bod[APP_BUFFER_SIZE];
 
 /*---------------------------------------------------------------------------*/
 
@@ -119,7 +115,7 @@ static button_hal_button_t *btn;   //Pointer to the button
 
 
 mqtt_status_t status_mov;
-mqtt_status_t status_bod;
+
 char broker_address[CONFIG_IP_ADDR_STR_LEN];
 
 
@@ -185,71 +181,40 @@ have_connectivity(void)
   return true;
 }
 /*--------------------SUPPORT METHODS--------------------------------*/
+/*Change the values generation modality, if 0 values for standing if 1 values for laying*/
 static void changeModality(){
 	modality++;
-	if(modality>=4){
+	if(modality>=2){
 		modality=0;}
 		printf("modality:%d\n",modality);
 		if(modality==0){
+		leds_off(14);
     		leds_on((LEDS_GREEN));
-		printf("//0= patient standing - heart good\n");
-		}
-		if(modality==1){
-		leds_on((LEDS_BLUE));
-		printf("patient standing - heart problem\n");
-		}
-		if(modality==2){
-		leds_on((LEDS_BLUE));
-		printf("patient fallen - heart good\n");
-		}
-		if(modality==3){
-		leds_on((LEDS_RED));
-		printf("patient fallen - heart problem\n");
+		printf("//0= patient standing \n");
 		}
 		
-	
-}
-/*
-static void setXzero(){
-	if(movements==1){
-		movements=0;
-		printf("movements set to: %d\n", movements);
+		if(modality==1){
 		leds_off(14);
-		leds_on(1 << movements);
-	}
-}
-static void setHeart(){
-	if(heart==0){
-		heart=1;
-		printf("heart set to: %d\n", heart);
-		leds_off(14);
-		leds_on(1 << heart);
-		return;
-	}
-		if(heart==1){
-		heart=0;
-		printf("heart set to: %d\n", heart);
-		leds_off(14);
-		leds_on(1 << heart);
-		return;
-	}
-}
-*/
+		leds_on((LEDS_RED));
+		printf("patient fallen \n");
+		}
+		
 
+}
 double random_double(double min, double max) {
     return min + ((double)rand() / ((double)RAND_MAX + 1)) * (max - min);
 }
 
 // Funzione per generare le componenti dell'accelerazione
 void generate_acceleration_components(int mod, int *xla, int *yla, int *zla, int *xaa, int *yaa, int *zaa) {
-    if (mod == 2 || mod==3) {
+    if (mod == 1) {
         *xla = (int)random_double(1.0, 2);
         *yla = (int)random_double(1.0, 2);
         *zla = (int)random_double(1.0, 2);
         *xaa = (int)random_double(50.0, 100.0);
         *yaa = (int)random_double(50.0, 100.0);
         *zaa = (int)random_double(50.0, 100.0);
-    } if(mod == 0 || mod==1) {
+    } if(mod == 0 ) {
         *xla = (int)random_double(6.0, 9.0);
         *yla = (int)random_double(6.0, 9.0);
         *zla = (int)random_double(6.0, 9.0);
@@ -266,29 +231,7 @@ void generate() {
 
 }
 
-int generate_random_body(int min, int max) {
-    return min + rand() % (max - min + 1);
-    }
-    //genera valori randomici per i dati presi dal cuore ecc
-    void generate_values_body(int mod, int *fbs, int *restecg, int *trestbps, int *thalac) {
-    if (mod == 1 || mod==3) {
-        *fbs = 1;
-        *restecg = 1;
-        *trestbps = generate_random_body(190, 300);
-        *thalac = generate_random_body(190, 300);
-    } else if (mod == 0 || mod==2) {
-        *fbs = 0;
-        *restecg = 0;
-        *trestbps = generate_random_body(70, 120);
-        *thalac = generate_random_body(70, 120);
-    } else {
-        printf("X deve essere 0 o 1\n");
-        exit(1);
-    }
-}
-void generate_body(){
-generate_values_body(modality, &fbs, &restecg, &trestbps, &thalac);
-}
+
 /*---------------------------------------------------------------------------*/
 
 //running method
@@ -317,12 +260,12 @@ static void sensor_sample(){
 			  // Subscribe to a movement topic
 			  strcpy(sub_mov_topic,"patient_movement");
 			  // Subscribe to body values topic
-			   strcpy(sub_bod_topic,"patient_values");
+
 
 			  status_mov = mqtt_subscribe(&conn, NULL, sub_mov_topic, MQTT_QOS_LEVEL_0);
-			  status_bod = mqtt_subscribe(&conn, NULL, sub_bod_topic, MQTT_QOS_LEVEL_0);
+
 			  printf("Subscribing!\n");
-			  if(status_mov == MQTT_STATUS_OUT_QUEUE_FULL || status_bod== MQTT_STATUS_OUT_QUEUE_FULL) {
+			  if(status_mov == MQTT_STATUS_OUT_QUEUE_FULL ) {
 				LOG_ERR("Tried to subscribe but command queue was full!\n");
 				
 			  }
@@ -334,17 +277,12 @@ static void sensor_sample(){
 		if(state == STATE_SUBSCRIBED){
 		// Publish Movement
 		generate(); //Creation of the movement values
-		generate_body();
+
 		sprintf(pub_mov_topic, "%s", "patient_values");
 		//Movement app buffer
-		sprintf(app_buffer_mov, "{\"app\":\"MedicalMonitoring\"\n\"Patient_ID\":1,\n\"xla\": %d,\n\"yla\": %d,\n\"zla\": %d,\n\"xaa\": %d,\n\"yaa\": %d,\n\"zaa\": %d,\n\"trestbps\": %d,\n\"fbs\": %d,\n\"restecg\": %d,\n\"thalach\": %d,\n\"MAC\": \"%s\"}", (int)xla,(int)yla,(int)zla,(int)xaa,(int)yaa,(int)zaa,trestbps,fbs,restecg,thalac, client_id);
+		sprintf(app_buffer_mov, "{\"app\":\"MedicalMonitoring\"\n\"Patient_ID\":1,\n\"xla\": %d,\n\"yla\": %d,\n\"zla\": %d,\n\"xaa\": %d,\n\"yaa\": %d,\n\"zaa\": %d,\n\"MAC\": \"%s\"}", (int)xla,(int)yla,(int)zla,(int)xaa,(int)yaa,(int)zaa, client_id);
 		printf("Publishing: %s\nTopic: %s\n", app_buffer_mov,pub_mov_topic);
-		//Publish Body
-		//generate_body();
-		//sprintf(pub_bod_topic, "%s", "patient_values");
-		//Body app buffer
-		//sprintf(app_buffer_bod, "{\"app\":\"MedicalMonitoring\"\n\"Patient_ID\":1,\n\"trestbps\": %d,\n\"fbs\": %d,\n\"restecg\": %d,\n\"thalach\": %d,\n\"MAC\": \"%s\"}", trestbps,fbs,restecg,thalac, client_id);
-		printf("Publishing: %s\nTopic: %s\n", app_buffer_bod, pub_bod_topic);
+
 
 
 
@@ -357,11 +295,7 @@ static void sensor_sample(){
          		state = STATE_INIT;
 
 		}
-		
-		//etimer_set(&periodic_timer, STATE_MACHINE_PERIODIC);
-      
-    
-
+		      
   }
 /*--------------------BEGIN--------------------------------------*/
 
@@ -385,7 +319,7 @@ PROCESS_THREAD(mqtt_client_process, ev, data)
   state=STATE_INIT;
 				    
   // Initialize periodic timer to check the status 
-  //etimer_set(&periodic_timer, STATE_MACHINE_PERIODIC);
+
   etimer_set(&periodic_timer, DEFAULT_PUBLISH_INTERVAL);
   btn = button_hal_get_by_index(0);  //Return the button of index0 since it's the only one button
   /* Main loop */

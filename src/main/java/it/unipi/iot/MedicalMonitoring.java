@@ -10,14 +10,18 @@ public class MedicalMonitoring {
             Database databaseHandler = new Database("db_config.properties");
             // Setting Actuators Handlers
             Actuator   actuator= new Actuator(1,databaseHandler);
-
             // COAP Server for actuators information stored in a MySQL database
             CoapServer server = new CoapServer();
-            server.add(new CoapHandler("registration", databaseHandler));
+            Coap_Handler handler=new Coap_Handler("registration", databaseHandler);
+            server.add(handler);
             server.start();
-
             //Launch MQTT subscriber
             MqttSubscriber mqttSubscriber = new MqttSubscriber(actuator);
+            //Launch user interface
+            UserControl user = new UserControl(databaseHandler,handler);
+            user.run();
+
+
         }
     }
 

@@ -145,9 +145,9 @@ public FallDetection(double xla,double yla,double zla,double xaa,double yaa,doub
         //check if a fall happened
         if(Math.abs(this.max_lin_acc-this.min_lin_acc)<0.4 && Math.abs(this.max_ang_acc-this.min_ang_acc)<60){
             //check if the subject us lying on a surface
-            System.out.println("\n----------------------------------------\n");
-            System.out.println("Calcolo accelerazioni:\nLin acc="+xla+"\nmax lin acc= "+this.max_lin_acc+"\nmax ang acc= "+ this.max_ang_acc+"\n"+(Math.acos(xla/9.8)>35));
-            System.out.println("\n----------------------------------------\n");
+            //System.out.println("\n----------------------------------------\n");
+            //System.out.println("Calcolo accelerazioni:\nLin acc="+xla+"\nmax lin acc= "+this.max_lin_acc+"\nmax ang acc= "+ this.max_ang_acc+"\n"+(Math.acos(xla/9.8)>35));
+            //System.out.println("\n----------------------------------------\n");
             double arccos=Math.acos(xla/9.8);
             double arccosdeg=Math.toDegrees(arccos);
             if(arccosdeg>35)

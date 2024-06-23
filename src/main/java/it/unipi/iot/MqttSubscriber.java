@@ -43,7 +43,7 @@ public class MqttSubscriber implements MqttCallback {
 
         try {
             //Defining MqttClient
-            System.out.println("Connecting to topics:"+topics[0]+"  "+topics[1] );
+            //System.out.println("Connecting to topics:"+topics[0]+"  "+topics[1] );
 
             MqttClient mqttClient = new MqttClient(broker, clientId);
             mqttClient.setCallback(this);
@@ -62,16 +62,16 @@ public class MqttSubscriber implements MqttCallback {
         throwable.printStackTrace(); //EOFException thrown here within a few seconds
 
     }
-/*
-    @Override
+
+
     public void messageArrived(String topic, MqttMessage message) throws Exception {
 
         try {
-            System.out.println("Topic received: "+  topic);
+            //System.out.println("Topic received: "+  topic);
             JSONObject request = (JSONObject) JSONValue.parseWithException(new String(message.getPayload()));
             String app = request.get("app").toString();
 
-            System.out.println(String.format("[%s] %s", topic, new String(message.getPayload())));
+            //System.out.println(String.format("[%s] %s", topic, new String(message.getPayload())));
             if(message==null)
             {
                 System.out.println("message NULL : " +message);
@@ -79,8 +79,8 @@ public class MqttSubscriber implements MqttCallback {
             }
 
             if(app.equals("MedicalMonitoring")) {
-                if (topic.equals("patient_movement")) {
-                    System.out.println("Saving for topic: "+  topic);
+                if (topic.equals("patient_values")) {
+                    //System.out.println("Saving for topic: "+  topic);
                     int patientID = Integer.parseInt(request.get("Patient_ID").toString());
                     // X Y Z values for linear acceleration
                     int xla = Integer.parseInt(request.get("xla").toString());
@@ -92,84 +92,10 @@ public class MqttSubscriber implements MqttCallback {
                     int zaa = Integer.parseInt(request.get("zaa").toString());
                     //MAC sensor address
                     String mac = request.get("MAC").toString();
-                    System.out.println("Actuator handling: "+  patientID + xla + yla +zla + xaa + yaa +zaa + mac);
-
-                    // handle value received
-                    actuator.handler(patientID,xla, yla, zla, xaa, yaa, mac, zaa, topic);
-                }
-                if (topic.equals("patient_values")) {
-                    System.out.println("Saving for topic: "+  topic);
-
-                    int patientID = Integer.parseInt(request.get("Patient_ID").toString());
-                    //trestbps
-                    int trestbps = Integer.parseInt(request.get("trestbps").toString());
-                    //fbs
-                    int fbs = Integer.parseInt(request.get("fbs").toString());
-                    //restecg
-                    int restecg = Integer.parseInt(request.get("restecg").toString());
-                    //thalach
-                    int thalach = Integer.parseInt(request.get("thalach").toString());
-                    //MAC sensor address
-                    String mac = request.get("MAC").toString();
-                    // handle value received
-                    System.out.println("Actuator handling: "+  patientID + trestbps + fbs + restecg + thalach + mac);
-
-                    actuator.valueHandler(patientID,trestbps, fbs, restecg, thalach, mac,topic);
-                }
-                else{
-                    System.out.println("Invalid Topic\n");
-                }
-            }
-
-        } catch (ParseException error) {
-
-            System.out.println("Error during data transmission: Data not received correctly");
-            throw new RuntimeException(error);
-        }
-
-    } */
-
-    public void messageArrived(String topic, MqttMessage message) throws Exception {
-
-        try {
-            System.out.println("Topic received: "+  topic);
-            JSONObject request = (JSONObject) JSONValue.parseWithException(new String(message.getPayload()));
-            String app = request.get("app").toString();
-
-            System.out.println(String.format("[%s] %s", topic, new String(message.getPayload())));
-            if(message==null)
-            {
-                System.out.println("message NULL : " +message);
-                return;
-            }
-
-            if(app.equals("MedicalMonitoring")) {
-                if (topic.equals("patient_values")) {
-                    System.out.println("Saving for topic: "+  topic);
-                    int patientID = Integer.parseInt(request.get("Patient_ID").toString());
-                    // X Y Z values for linear acceleration
-                    int xla = Integer.parseInt(request.get("xla").toString());
-                    int yla = Integer.parseInt(request.get("yla").toString());
-                    int zla = Integer.parseInt(request.get("zla").toString());
-                    // X Y X values for angular acceleration
-                    int xaa = Integer.parseInt(request.get("xaa").toString());
-                    int yaa = Integer.parseInt(request.get("yaa").toString());
-                    int zaa = Integer.parseInt(request.get("zaa").toString());
-                    //trestbps
-                    int trestbps = Integer.parseInt(request.get("trestbps").toString());
-                    //fbs
-                    int fbs = Integer.parseInt(request.get("fbs").toString());
-                    //restecg
-                    int restecg = Integer.parseInt(request.get("restecg").toString());
-                    //thalach
-                    int thalach = Integer.parseInt(request.get("thalach").toString());
-                    //MAC sensor address
-                    String mac = request.get("MAC").toString();
-                    System.out.println("Actuator mov handling: "+  patientID + xla + yla +zla + xaa + yaa +zaa + mac);
-                    System.out.println("Actuator body handling: "+  patientID + trestbps + fbs + restecg + thalach + mac);
+                    //System.out.println("Actuator mov handling: "+  patientID + xla + yla +zla + xaa + yaa +zaa + mac);
 
                     // handle movement and body received
-                    actuator.handler(patientID,xla, yla, zla, xaa, yaa,zaa,trestbps, fbs, restecg, thalach, mac, "patient_values");
+                    actuator.handler(patientID,xla, yla, zla, xaa, yaa,zaa, mac, "patient_values");
                     //actuator.valueHandler(patientID,trestbps, fbs, restecg, thalach, mac,"patient_values");
                 }
 
@@ -189,7 +115,7 @@ public class MqttSubscriber implements MqttCallback {
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
 
-        System.out.println("Delivery status: completed!");
+        //System.out.println("Delivery status: completed!");
 
     }
 

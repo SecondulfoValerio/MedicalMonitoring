@@ -10,6 +10,7 @@
 #include "net/ipv6/uiplib.h"
 #include "sys/etimer.h"
 #include "os/dev/leds.h"
+#include "dev/button-hal.h"
 
 /* Log configuration */
 #include "sys/log.h"
@@ -23,14 +24,17 @@ char *service_url = "/registration"; //registration of the resource
 
 // flag to exit the while cycle and start the server tasks
 static bool registered = false;
+static struct etimer e_timer;
 
 // Define the resource
-extern coap_resource_t res_body;
+extern coap_resource_t res_body ,res_alarm;
+//extern coap_resource_t res_body;
 //extern coap_resource_t res_fall;
 static struct etimer et;
 static coap_endpoint_t server_ep;
 static coap_message_t request[1]; /* This way the packet can be treated as pointer as usual. */
 static char json_message[] = "{\"app\":\"MedicalMonitoring\",\n\"Patient_ID\":1}"; //Patient ID set to 1 
+
 
 
 // Define a handler to handle the response from the server
@@ -41,6 +45,8 @@ void client_chunk_handler(coap_message_t *response){
     }
     registered = true;
 }
+
+
 
 /* Declare and auto-start this file's process */
 PROCESS(coap_actuator, "coap-actuator");
@@ -84,10 +90,30 @@ PROCESS_THREAD(coap_actuator, ev, data){
     leds_off(15);
 
     //////////////////// COAP SERVER //////////////////
-
+    
     // Activation of a resource
+    coap_activate_resource(&res_alarm, "alarm");
     coap_activate_resource(&res_body, "body");
-   // coap_activate_resource(&res_fall, "fall");
+
+    
+    etimer_set(&e_timer, CLOCK_SECOND * 5);
+
+    printf("Loop\n");
+    //int modality=0; //0 good heart 1 bad heart
+  while(1) {
+    PROCESS_WAIT_EVENT();
+
+	if(ev == PROCESS_EVENT_TIMER && data == &e_timer){
+		    printf("Event triggered\n");
+		  
+			res_body.trigger();
+			
+			etimer_set(&e_timer, CLOCK_SECOND * 4);
+	}
+
+   }
+
+
 
     
     PROCESS_END();

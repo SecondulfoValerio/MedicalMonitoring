@@ -46,7 +46,7 @@ public class Database {
         this.port = conf.getProperty("db.port");
         this.user = conf.getProperty("db.username");
         this.psw = conf.getProperty("db.password");
-        System.out.println(this.db_IP+" "+this.db_name+" "+this.port+" "+this.user+" "+this.psw);
+        //System.out.println(this.db_IP+" "+this.db_name+" "+this.port+" "+this.user+" "+this.psw);
     }
 
     /**
@@ -56,12 +56,12 @@ public class Database {
      * it has a specific role (possibile da rimuovere)
      */
     public boolean addActuator(String ip, int patientID) {
-        System.out.println("INSERTING ACTUATOR" );
+        //System.out.println("INSERTING ACTUATOR" );
 
         String url = "jdbc:mysql://" + db_IP + ":" + port + "/" + db_name;
-        System.out.println("print db url:"+ url);
+        //System.out.println("print db url:"+ url);
         String sql = "INSERT INTO Actuators(Actuator_ID, Patient_ID) values (?,?)";
-        System.out.println("print db string:" +sql);
+        //System.out.println("print db string:" +sql);
 
         try (Connection co = DriverManager.getConnection(url, user, psw);
             PreparedStatement pr = co.prepareStatement(sql)) {
@@ -69,7 +69,7 @@ public class Database {
             pr.setInt(2, patientID);
             int rowsInserted = pr.executeUpdate();
             if (rowsInserted <= 0) {
-                System.out.println("Cannot insert Actuator: Actuator already exists!");
+                //System.out.println("Cannot insert Actuator: Actuator already exists!");
                 return false;
             }
         } catch (SQLIntegrityConstraintViolationException error) {
@@ -79,7 +79,7 @@ public class Database {
             e.printStackTrace();
             return false;
         }
-        System.out.println("Actuator registered:\nPatientID: " + patientID);
+        //System.out.println("Actuator registered:\nPatientID: " + patientID);
         return true;
     }
 
@@ -88,12 +88,12 @@ public class Database {
      * Creates and insert new data related to a patient movement coming from the mqtt sensor
      */
     public boolean addPatientDataMovement(String topic,int patientID, double lastlin_acc, double last_ang_acc,String mac) {
-        System.out.println("INSERTING DATA BODY" );
+        //System.out.println("INSERTING DATA BODY" );
 
         String url = "jdbc:mysql://" + db_IP + ":" + port + "/" + db_name;
-        System.out.println("print db url:"+ url);
+        //System.out.println("print db url:"+ url);
         String sql = "INSERT INTO MovementData(Topic, Patient_ID, lastlin_acc, last_ang_acc, MAC) values (?,?,?,?,?)";
-        System.out.println("print db string:" +sql);
+        //System.out.println("print db string:" +sql);
         try (Connection co = DriverManager.getConnection(url, user, psw);
              PreparedStatement pr = co.prepareStatement(sql)) {
                 pr.setString(1, topic);
@@ -113,27 +113,29 @@ public class Database {
 
             return false;
         }
-        System.out.println("Data inserted:\n Topic: " + topic +"\n"+"Patiend ID: " + patientID + "\n" +"Last linear acceleration: " + lastlin_acc + "\n" +"Last angular acc: " + last_ang_acc + "\n"+"MAC address: " + mac + " \n");
+        //System.out.println("Data inserted:\n Topic: " + topic +"\n"+"Patiend ID: " + patientID + "\n" +"Last linear acceleration: " + lastlin_acc + "\n" +"Last angular acc: " + last_ang_acc + "\n"+"MAC address: " + mac + " \n");
         return true;
     }
 
-    public boolean addPatientDataBody(String topic,int patientID, int trestbps, int fbs, int restecg, int thalach,String mac) {
-        System.out.println("INSERTING PATIENT BODY" );
+    public boolean addPatientDataBody(int patientID, int trestbps, int fbs, int restecg, int thalach) {
+        //System.out.println("INSERTING PATIENT BODY" );
 
         String url = "jdbc:mysql://" + db_IP + ":" + port + "/" + db_name;
-        System.out.println("print db url:"+ url);
-        String sql = "INSERT INTO BodyData(Topic,Patient_ID, trestbps, fbs, restecg, thalach, MAC) values (?,?,?,?,?,?,?)";
-        System.out.println("print db string:" +sql);
+        //System.out.println("print db url:"+ url);
+        //String sql = "INSERT INTO BodyData(Topic,Patient_ID, trestbps, fbs, restecg, thalach) values (?,?,?,?,?,?)";
+        String sql = "INSERT INTO BodyData(Patient_ID, trestbps, fbs, restecg, thalach) values (?,?,?,?,?)";
+
+        //System.out.println("print db string:" +sql);
 
         try (Connection co = DriverManager.getConnection(url, user, psw);
              PreparedStatement pr = co.prepareStatement(sql)) {
-            pr.setString(1, topic);
-            pr.setInt(2, patientID);
-            pr.setInt(3, trestbps);
-            pr.setInt(4, fbs);
-            pr.setInt(5, restecg);
-            pr.setInt(6, thalach);
-            pr.setString(7, mac);
+            //pr.setString(1, topic);
+            pr.setInt(1, patientID);
+            pr.setInt(2, trestbps);
+            pr.setInt(3, fbs);
+            pr.setInt(4, restecg);
+            pr.setInt(5, thalach);
+           // pr.setString(7, mac);
             int rowsInserted = pr.executeUpdate();
             if (rowsInserted <= 0) {
                 System.out.println("Error: No data insered");
@@ -145,16 +147,16 @@ public class Database {
 
             return false;
         }
-        System.out.println("Data inserted:\n Topic: " + topic +"\n"+"Patiend ID: " + patientID + "\n" +"trestbps: " + trestbps + "\n" +"fbs: " + fbs +
-                "restecg: " + restecg + "\n" +"thalach: " + thalach + "\n" +"MAC address: " + mac + " \n");
+       // System.out.println("Data inserted:\n Topic: " + topic +"\n"+"Patiend ID: " + patientID + "\n" +"trestbps: " + trestbps + "\n" +"fbs: " + fbs +
+       //       "\n"+  "restecg: " + restecg + "\n" +"thalach: " + thalach + "\n" +"MAC address: "  + " \n");
         return true;
     }
 
     /**
      *Return the IP address of the sensor associated to a specific patient in the DB
      */
-    public String findSensIP(int patientID, String resource) {
-        System.out.println("SEARCH FOR FINDSENS IP" );
+    public String findSensIP(int patientID) {
+        //System.out.println("SEARCH FOR FINDSENS IP" );
                 String ip_value = new String();
         String url = "jdbc:mysql://" + db_IP + ":" + port + "/" + db_name;
         String sql = "SELECT Actuator_ID FROM Actuators WHERE Patient_ID=?";
@@ -170,5 +172,36 @@ public class Database {
             e.printStackTrace();
         }
         return ip_value;
+    }
+
+    public void getPatientInfo (int patientID) {
+        String nome = new String();
+        String cognome = new String();
+        int eta=0 ;
+
+        String url = "jdbc:mysql://" + db_IP + ":" + port + "/" + db_name;
+        String sql = "SELECT Name, Surname, Age FROM Patients WHERE Patient_ID=?";
+        try (Connection co = DriverManager.getConnection(url, user, psw);
+             PreparedStatement pr = co.prepareStatement(sql)) {
+            pr.setInt(1, patientID);
+            //pr.setString(2, resource);
+            ResultSet r = pr.executeQuery();
+            while (r.next()) {
+                 nome = r.getString("Name");
+                 cognome = r.getString("Surname");
+                 eta = r.getInt("Age");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("--------------");
+        System.out.println("Patient_ID:" + patientID);
+        System.out.println("Nome:" + nome);
+        System.out.println("Cognome:" + cognome);
+        System.out.println("Età:" + eta);
+
+        System.out.println("--------------");
+
+
     }
 }

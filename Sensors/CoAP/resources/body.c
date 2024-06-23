@@ -8,119 +8,129 @@
 #include "cuore.h" // emlearn generated model
 #include "eml_net.h"
 
+#define BUFFER_SIZE 512
+#define MAX_PAYLOAD_SIZE 1000
 
+//static char client_id[BUFFER_SIZE];
 // Dichiarazioni delle funzioni handler
-static void res_put_handler(coap_message_t *request, coap_message_t *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+
 static void res_get_handler(coap_message_t *request, coap_message_t *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void res_event_handler(void);
 
 // Variabili per i valori dei parametri JSON
-char command[10];
-int trestbps;
-int fbs;
-int restecg;
-int thalach;
+
+char alarm[10]; // is used to switch the heart warning status to good
+int heart_warning; //to start heart desease modality
+
+static int trestbps =0;
+static int fbs =0;
+static int restecg =0;
+static int thalach =0;
+
 int patient_heart = 0; // 0 = normale, 1 = anormale
 float features[] = { 120, 1,1, 200 }; //monitoring features trestbps fbs restecg thalach
 float outputs[2] = {0, 0}; //output features [0] normal probability [1] illness probability
 int pat_status[]={0,0};
+int timer_modality_switch=0; //every 3 msg reports (12 seconds) switch from good heart to bad heart values
+
+
+
 // Definizione della risorsa
-RESOURCE(res_body,
+EVENT_RESOURCE(res_body,
 	"title=\"MedicalMonitoring: ?body=0\";rt=\"Control\"", 
          res_get_handler,                     // GET handler
          NULL,                                // POST handler
-         res_put_handler,                     // PUT handler
-         NULL);                               // DELETE handler
+         //res_put_handler,                     // PUT handler
+         NULL,
+         NULL,				      //DELETE handler
+         res_event_handler		      //EVENT handler
+);    
 
-// Funzione GET handler
 static void res_get_handler(coap_message_t *request, coap_message_t *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) {
-  // Restituisce il valore di patient_heart
-  const char* response_message = patient_heart == 1 ? "Anormale" : "Normale";
-  size_t len = strlen(response_message);
-  memcpy(buffer, response_message, len);
-  coap_set_header_content_format(response, TEXT_PLAIN);
-  coap_set_header_etag(response, (uint8_t *)&len, 1);
-  coap_set_payload(response, buffer, len);
+ // Creazione manuale del payload JSON
+    char response_str[MAX_PAYLOAD_SIZE];
+    char status_paziente[30];
+    if (patient_heart==1)
+    	strcpy(status_paziente,"1");
+    else
+    	strcpy(status_paziente,"0");
+    	
+
+    sprintf(response_str, 
+             "{\"stat\":\"%s\",\"trestbps\":%d,\"fbs\":%d,\"restecg\":%d,\"thalach\":%d}", 
+             status_paziente, trestbps, fbs, restecg, thalach);
+
+    // Impostare il payload della risposta CoAP con il JSON
+    coap_set_header_content_format(response, APPLICATION_JSON);
+    coap_set_payload(response, buffer, snprintf((char *)buffer, preferred_size, "%s", response_str));
+    // Impostare il payload della risposta CoAP con il JSON
+
+    printf("Get received! JSON response: %s\n", response_str);
+
+    // Deallocazione delle risorse
 }
 
-// Funzione per interpretare il payload JSON
-static int parse_json_payload(const char *payload, int payload_len) {
-  cJSON *json = cJSON_ParseWithLength(payload, payload_len);
-  if (json == NULL) {
-    return -1; // Errore di parsing
-  }
 
-  cJSON *command_item = cJSON_GetObjectItemCaseSensitive(json, "command");
-  if (cJSON_IsString(command_item) && (command_item->valuestring != NULL)) {
-    strncpy(command, command_item->valuestring, sizeof(command));
-  }
+//set allarm off
 
-  cJSON *trestbps_item = cJSON_GetObjectItemCaseSensitive(json, "trestbps");
-  if (cJSON_IsNumber(trestbps_item)) {
-    trestbps = trestbps_item->valuedouble;
-  }
-
-  cJSON *fbs_item = cJSON_GetObjectItemCaseSensitive(json, "fbs");
-  if (cJSON_IsNumber(fbs_item)) {
-    fbs = fbs_item->valuedouble;
-  }
-
-  cJSON *restecg_item = cJSON_GetObjectItemCaseSensitive(json, "restecg");
-  if (cJSON_IsNumber(restecg_item)) {
-    restecg = restecg_item->valuedouble;
-  }
-
-  cJSON *thalac_item = cJSON_GetObjectItemCaseSensitive(json, "thalach");
-  if (cJSON_IsNumber(thalac_item)) {
-    thalach = thalac_item->valuedouble;
-  }
-
-  cJSON_Delete(json);
-  return 0;
+//generate random values for heart desease detection
+int generate_random_body(int min, int max) {
+    return min + rand() % (max - min + 1);
+    }
+    //genera valori randomici per i dati presi dal cuore ecc
+    void generate_values_body(int *mod, int *fbs, int *restecg, int *trestbps, int *thalach) {
+    printf("mod %d",*mod);
+    if (*mod == 1) {
+        *fbs = 1;
+        *restecg = 1;
+        *trestbps = generate_random_body(200, 300);
+        *thalach = generate_random_body(200, 300);
+    } else if (*mod == 0) {
+        *fbs = 0;
+        *restecg = 0;
+        *trestbps = generate_random_body(70, 110);
+        *thalach = generate_random_body(70, 110);
+    } else {
+        printf("Error in heart values generation\n");
+        exit(1);
+    }
 }
-//     sendBodyMessage("body", String.valueOf(fall),trestbps,fbs,restecg,thalach, databaseHandler.findSensIP(patientID, "body"));
-
-// Funzione per classificare lo stato del paziente
-
-static void response_status(char msg[]){
-
-	if(pat_status[0]==0 && pat_status[1]==0){
-			leds_on((LEDS_GREEN));
-	 	sprintf(msg,"Patient stable");
-	
-	}
-	if(pat_status[0]==0 && pat_status[1]==1){
-				leds_on((LEDS_BLUE));
-		sprintf(msg,"Patient is having heart problems, sending help request");
-
-	
-	}
-	if(pat_status[0]==1 && pat_status[1]==0){
-					leds_on((LEDS_BLUE));
-		sprintf(msg,"Patient has fallen, sending help request");
-	
-	}
-	if(pat_status[0]==1 && pat_status[1]==1){
-					leds_on((LEDS_RED));
-		sprintf(msg,"Patient is in danger, request is needed immediatly");
-	
-	}
-
+void generate_body(){ 
+   //1-12 seconds good heart simulation 13-24 seconds bad heart simulation
+   if(timer_modality_switch>=6){ //reset counter after 24 seconds to good heart simulation
+   	printf("reset timer %d\n",timer_modality_switch);
+  	timer_modality_switch=0;
+  	}
+  if(timer_modality_switch<4){ //first 12 seconds good heart simulation 
+  	timer_modality_switch++;
+  	printf("timer %d\n",timer_modality_switch);
+  	heart_warning=0;
+  	}
+  if(timer_modality_switch>=4 && timer_modality_switch<6){ //12-24 seconds bad heart simulation
+  	timer_modality_switch++;
+  	printf("timer %d\n",timer_modality_switch);
+  	heart_warning=1;
+  	}
+generate_values_body(&heart_warning, &fbs, &restecg, &trestbps, &thalach); //based on alarm value generate good heart or desease heart values
 }
-
 static void heart_monitor(){
+
+  	
+  generate_body();
   printf("%p\n", eml_net_activation_function_strs); // This is needed to avoid compiler error (warnings == errors);
   features[0]= trestbps ;
   features[1]= fbs ;
   features[2]=  restecg;
   features[3]=  thalach;
   eml_net_predict_proba(&cuore, features, 4, outputs, 2);
-  printf("CONDIZIONI:\nComand=%s\nTrestbps=%d\nFbs=%d\nRestecg=%d\nThalach=%d\nOutput1=%f\nOutput2=%f\n",command,trestbps,fbs,restecg,thalach,outputs[0],outputs[1]);
+  printf("CONDIZIONI:\nTrestbps=%d\nFbs=%d\nRestecg=%d\nThalach=%d\nOutput1=%f\nOutput2=%f\n",trestbps,fbs,restecg,thalach,outputs[0],outputs[1]);
   if (outputs[0]<outputs[1]){
       patient_heart = 0; // Normale
       pat_status[1]=0;
       printf("Patient heart: normal\n");
-    	leds_on(2); //turn on green light
-    	leds_off(4);//turn off red light n2
+    	//leds_on(2); //turn on green light
+    	//leds_off(LEDS_RED);
+    	//leds_on(LEDS_GREEN);
     	//leds_on(LEDS_RED);
     	pat_status[1]=0;
     
@@ -129,62 +139,21 @@ static void heart_monitor(){
     printf("[WARNING] Patient heart: anomalous \n");
     patient_heart = 1; // Malato
     pat_status[1]=1;
-    leds_off(2); //turn off green light
-    leds_on(4); //turn on red light n2
-    pat_status[1]=1;
+
   }
-  if (strcmp(command,"1")==0){
-  	pat_status[0]=1;
-  	printf("[WARNING] Patient has fallen\n");
-  	    leds_off(2); //turn off green light
-   	    leds_on(6); //turn on light n2
-   	    pat_status[0]=1;
-   	    
-  }
-  else{
-    	pat_status[0]=0;
- 	printf("Patient is normal\n");
-  	    leds_on(2); //turn off green light
-   	    leds_off(6); //turn on light n2}
-   	    pat_status[0]=0;
-   }
+  
   
   
 }
 
+static void res_event_handler()
+{
 
-// Funzione PUT handler
-static void res_put_handler(coap_message_t *request, coap_message_t *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) {
-  unsigned int content_format = -1;  // Cambiato a unsigned int
-      char reply[200];
+  heart_monitor();
+  coap_notify_observers(&res_body);
 
-  // Ottiene l'header del formato del contenuto dal messaggio CoAP
-  coap_get_header_content_format(request, &content_format);
+    
 
-  // Verifica che il formato del contenuto sia JSON
-  if (content_format == APPLICATION_JSON) {
-    const char *payload = (const char *)request->payload;
-    int payload_len = request->payload_len;
-
-    // Parse JSON payload
-    if (parse_json_payload(payload, payload_len) == 0) {
-      // Classifica lo stato del paziente
-      heart_monitor();
-
-      // Invia risposta e Imposta il codice di stato della risposta per indicare il successo
-    response_status(reply);
-
-    coap_set_header_content_format(response, TEXT_PLAIN);
-    coap_set_payload(response, buffer, snprintf((char *)buffer, preferred_size, "%s", reply));
-    coap_set_status_code(response, CHANGED_2_04);
-    } else {
-      printf("Error in the payload received");
-      // Imposta il codice di stato della risposta per indicare una richiesta errata
-      coap_set_status_code(response, BAD_REQUEST_4_00);
-    }
-  } else {
-    // Imposta il codice di stato della risposta per indicare un formato non supportato
-    coap_set_status_code(response, UNSUPPORTED_MEDIA_TYPE_4_15);
-  }
 }
+
 

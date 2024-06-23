@@ -50,8 +50,8 @@ build/cooja/obj/coap-actuator.o: coap-actuator.c \
  ../../os/net/routing/routing.h ../../os/net/ipv6/uip-ds6.h \
  ../../os/net/ipv6/uip-debug.h ../../os/net/net-debug.h \
  ../../os/net/ipv6/uiplib.h ../../os/dev/leds.h ../../os/dev/gpio-hal.h \
- ../../arch/platform/cooja/./dev/gpio-hal-arch.h ../../os/sys/log.h \
- ../../os/sys/log-conf.h
+ ../../arch/platform/cooja/./dev/gpio-hal-arch.h \
+ ../../os/dev/button-hal.h ../../os/sys/log.h ../../os/sys/log-conf.h
 ../../os/net/app-layer/coap/module-macros.h:
 ../../os/contiki.h:
 ../../arch/platform/cooja/./contiki-conf.h:
@@ -144,5 +144,6 @@ project-conf.h:
 ../../os/dev/leds.h:
 ../../os/dev/gpio-hal.h:
 ../../arch/platform/cooja/./dev/gpio-hal-arch.h:
+../../os/dev/button-hal.h:
 ../../os/sys/log.h:
 ../../os/sys/log-conf.h:
